@@ -37,6 +37,12 @@ export const getCourses = async () => {
     return response.data;
 };
 
+// Get courses assigned to a specific staff member
+export const getStaffCourses = async (staffId) => {
+    const response = await api.get(`/academic/staff/${staffId}/courses`);
+    return response.data;
+};
+
 export const createCourse = async (data) => {
     const response = await api.post('/academic/courses', data);
     return response.data;

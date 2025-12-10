@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCourses, createCourse, getPrograms, getStaff } from '../services/api';
+import { getCourses, createCourse, getPrograms, getStaff, getStaffCourses } from '../services/api';
 import { Plus, BookOpen, User, GraduationCap, ExternalLink } from 'lucide-react';
 
 const Courses = () => {
@@ -17,6 +17,11 @@ const Courses = () => {
         program_ids: []
     });
 
+    // Get current user from localStorage
+    const user = JSON.parse(localStorage.getItem('user'));
+    const isAdmin = user?.role === 'admin';
+    const isStaff = user?.role === 'staff';
+
     useEffect(() => {
         loadCourses();
         loadPrograms();
@@ -24,8 +29,15 @@ const Courses = () => {
     }, []);
 
     const loadCourses = async () => {
-        const data = await getCourses();
-        setCourses(data);
+        // Staff members only see their assigned courses
+        if (isStaff && user?.user_id) {
+            const data = await getStaffCourses(user.user_id);
+            setCourses(data);
+        } else {
+            // Admin sees all courses
+            const data = await getCourses();
+            setCourses(data);
+        }
     };
 
     const loadPrograms = async () => {
@@ -70,14 +82,19 @@ const Courses = () => {
     return (
         <div>
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Courses</h1>
-                <button
-                    onClick={() => setShowModal(true)}
-                    className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-                >
-                    <Plus size={20} className="mr-2" />
-                    Add New Course
-                </button>
+                <h1 className="text-2xl font-bold text-gray-900">
+                    {isStaff ? 'My Courses' : 'Courses'}
+                </h1>
+                {/* Only admin can add new courses */}
+                {isAdmin && (
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                    >
+                        <Plus size={20} className="mr-2" />
+                        Add New Course
+                    </button>
+                )}
             </div>
 
             {/* Course Cards */}

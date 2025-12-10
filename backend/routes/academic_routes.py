@@ -137,3 +137,29 @@ def get_program_courses(program_id):
         'semester': pc.semester,
         'credits': pc.course.credits
     } for pc in program_courses])
+
+# Get courses assigned to a specific staff member
+@academic_bp.route('/staff/<int:staff_id>/courses', methods=['GET'])
+def get_staff_courses(staff_id):
+    """Get courses assigned to a specific staff member"""
+    courses = Course.query.filter_by(staff_id=staff_id).all()
+    result = []
+    for c in courses:
+        # Get linked programs
+        linked_programs = [{
+            'program_id': pc.program_id,
+            'program_name': pc.program.program_name,
+            'semester': pc.program.semester
+        } for pc in c.program_courses]
+        
+        result.append({
+            'course_id': c.course_id,
+            'course_name': c.course_name,
+            'description': c.description,
+            'credits': c.credits,
+            'staff_id': c.staff_id,
+            'teacher_name': c.teacher.name if c.teacher else None,
+            'linked_programs': linked_programs,
+            'status': c.status
+        })
+    return jsonify(result)

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import {
     Play, Plus, FileText, HelpCircle, ArrowLeft, Clock,
-    Video, BookOpen, CheckCircle, Trash2, Edit
+    Video, BookOpen, CheckCircle, Trash2, Edit, ShieldAlert
 } from 'lucide-react';
 
 const CourseDetail = () => {
@@ -15,6 +15,7 @@ const CourseDetail = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [showQuizModal, setShowQuizModal] = useState(false);
     const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+    const [accessDenied, setAccessDenied] = useState(false);
     const [materialForm, setMaterialForm] = useState({
         title: '',
         description: '',
@@ -37,6 +38,11 @@ const CourseDetail = () => {
         due_date: ''
     });
 
+    // Get current user from localStorage
+    const user = JSON.parse(localStorage.getItem('user'));
+    const isAdmin = user?.role === 'admin';
+    const isStaff = user?.role === 'staff';
+
     useEffect(() => {
         loadCourse();
         loadMaterials();
@@ -46,6 +52,13 @@ const CourseDetail = () => {
         try {
             const response = await api.get('/academic/courses');
             const courseData = response.data.find(c => c.course_id === parseInt(courseId));
+
+            // Check if staff user has access to this course
+            if (isStaff && courseData && courseData.staff_id !== user?.user_id) {
+                setAccessDenied(true);
+                return;
+            }
+
             setCourse(courseData);
         } catch (error) {
             console.error('Error loading course:', error);
@@ -138,6 +151,26 @@ const CourseDetail = () => {
         const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s]+)/);
         return videoId ? `https://www.youtube.com/embed/${videoId[1]}` : url;
     };
+
+    // Access Denied Screen for unauthorized staff
+    if (accessDenied) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <ShieldAlert className="h-16 w-16 mx-auto text-red-500 mb-4" />
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+                    <p className="text-gray-600 mb-6">You don't have permission to access this course.</p>
+                    <p className="text-sm text-gray-500 mb-6">You can only manage courses assigned to you.</p>
+                    <button
+                        onClick={() => navigate('/courses')}
+                        className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                    >
+                        Back to My Courses
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     if (!course) {
         return <div className="flex items-center justify-center h-64">Loading...</div>;
