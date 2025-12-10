@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { getPrograms, createProgram, getAcademicYears } from '../services/api';
-import { Plus, BookOpen, Calendar } from 'lucide-react';
+import { Plus, BookOpen, Calendar, Filter } from 'lucide-react';
 
 const Programs = () => {
     const [programs, setPrograms] = useState([]);
     const [academicYears, setAcademicYears] = useState([]);
     const [showModal, setShowModal] = useState(false);
+    const [selectedAcademicYear, setSelectedAcademicYear] = useState(''); // Filter state
     const [formData, setFormData] = useState({
         program_name: '',
         description: '',
@@ -15,12 +16,17 @@ const Programs = () => {
     });
 
     useEffect(() => {
-        loadPrograms();
         loadAcademicYears();
     }, []);
 
+    // Load programs when filter changes
+    useEffect(() => {
+        loadPrograms();
+    }, [selectedAcademicYear]);
+
     const loadPrograms = async () => {
-        const data = await getPrograms();
+        const academicYearId = selectedAcademicYear ? parseInt(selectedAcademicYear) : null;
+        const data = await getPrograms(academicYearId);
         setPrograms(data);
     };
 
@@ -52,13 +58,31 @@ const Programs = () => {
         <div>
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-gray-900">Programs</h1>
-                <button
-                    onClick={() => setShowModal(true)}
-                    className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-                >
-                    <Plus size={20} className="mr-2" />
-                    Add New Program
-                </button>
+                <div className="flex items-center space-x-4">
+                    {/* Academic Year Filter */}
+                    <div className="flex items-center space-x-2">
+                        <Filter className="h-5 w-5 text-gray-400" />
+                        <select
+                            value={selectedAcademicYear}
+                            onChange={(e) => setSelectedAcademicYear(e.target.value)}
+                            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        >
+                            <option value="">All Academic Years</option>
+                            {academicYears.map((year) => (
+                                <option key={year.academic_year_id} value={year.academic_year_id}>
+                                    {year.year}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                    >
+                        <Plus size={20} className="mr-2" />
+                        Add New Program
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">

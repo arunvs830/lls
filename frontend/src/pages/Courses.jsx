@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCourses, createCourse, getPrograms, getStaff, getStaffCourses } from '../services/api';
-import { Plus, BookOpen, User, GraduationCap, ExternalLink } from 'lucide-react';
+import { getCourses, createCourse, getPrograms, getStaff, getStaffCourses, getAcademicYears } from '../services/api';
+import { Plus, BookOpen, User, GraduationCap, ExternalLink, Filter } from 'lucide-react';
 
 const Courses = () => {
     const navigate = useNavigate();
     const [courses, setCourses] = useState([]);
     const [programs, setPrograms] = useState([]);
     const [staff, setStaff] = useState([]);
+    const [academicYears, setAcademicYears] = useState([]);
+    const [selectedAcademicYear, setSelectedAcademicYear] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [formData, setFormData] = useState({
         course_name: '',
@@ -23,21 +25,32 @@ const Courses = () => {
     const isStaff = user?.role === 'staff';
 
     useEffect(() => {
-        loadCourses();
+        loadAcademicYears();
         loadPrograms();
         loadStaff();
     }, []);
 
+    // Load courses when filter changes
+    useEffect(() => {
+        loadCourses();
+    }, [selectedAcademicYear]);
+
     const loadCourses = async () => {
-        // Staff members only see their assigned courses
+        // Staff members only see their assigned courses (no filter for staff)
         if (isStaff && user?.user_id) {
             const data = await getStaffCourses(user.user_id);
             setCourses(data);
         } else {
-            // Admin sees all courses
-            const data = await getCourses();
+            // Admin sees courses filtered by academic year
+            const academicYearId = selectedAcademicYear ? parseInt(selectedAcademicYear) : null;
+            const data = await getCourses(academicYearId);
             setCourses(data);
         }
+    };
+
+    const loadAcademicYears = async () => {
+        const data = await getAcademicYears();
+        setAcademicYears(data);
     };
 
     const loadPrograms = async () => {
@@ -85,16 +98,36 @@ const Courses = () => {
                 <h1 className="text-2xl font-bold text-gray-900">
                     {isStaff ? 'My Courses' : 'Courses'}
                 </h1>
-                {/* Only admin can add new courses */}
-                {isAdmin && (
-                    <button
-                        onClick={() => setShowModal(true)}
-                        className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-                    >
-                        <Plus size={20} className="mr-2" />
-                        Add New Course
-                    </button>
-                )}
+                <div className="flex items-center space-x-4">
+                    {/* Academic Year Filter - Only for Admin */}
+                    {isAdmin && (
+                        <div className="flex items-center space-x-2">
+                            <Filter className="h-5 w-5 text-gray-400" />
+                            <select
+                                value={selectedAcademicYear}
+                                onChange={(e) => setSelectedAcademicYear(e.target.value)}
+                                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                            >
+                                <option value="">All Academic Years</option>
+                                {academicYears.map((year) => (
+                                    <option key={year.academic_year_id} value={year.academic_year_id}>
+                                        {year.year}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+                    {/* Only admin can add new courses */}
+                    {isAdmin && (
+                        <button
+                            onClick={() => setShowModal(true)}
+                            className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                        >
+                            <Plus size={20} className="mr-2" />
+                            Add New Course
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Course Cards */}

@@ -50,7 +50,14 @@ def create_program():
 
 @academic_bp.route('/programs', methods=['GET'])
 def get_programs():
-    programs = Program.query.all()
+    # Optional filter by academic year
+    academic_year_id = request.args.get('academic_year_id', type=int)
+    
+    query = Program.query
+    if academic_year_id:
+        query = query.filter_by(academic_year_id=academic_year_id)
+    
+    programs = query.all()
     return jsonify([{
         'program_id': p.program_id,
         'program_name': p.program_name,
@@ -91,14 +98,26 @@ def create_course():
 
 @academic_bp.route('/courses', methods=['GET'])
 def get_courses():
-    courses = Course.query.all()
+    # Optional filter by academic year (via linked programs)
+    academic_year_id = request.args.get('academic_year_id', type=int)
+    
+    if academic_year_id:
+        # Get courses linked to programs in the specified academic year
+        courses = Course.query.join(ProgramCourse).join(Program).filter(
+            Program.academic_year_id == academic_year_id
+        ).distinct().all()
+    else:
+        courses = Course.query.all()
+    
     result = []
     for c in courses:
         # Get linked programs
         linked_programs = [{
             'program_id': pc.program_id,
             'program_name': pc.program.program_name,
-            'semester': pc.program.semester
+            'semester': pc.program.semester,
+            'academic_year_id': pc.program.academic_year_id,
+            'academic_year_name': pc.program.academic_year.year if pc.program.academic_year else None
         } for pc in c.program_courses]
         
         result.append({

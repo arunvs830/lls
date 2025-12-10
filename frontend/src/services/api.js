@@ -22,8 +22,9 @@ export const createAcademicYear = async (data) => {
     return response.data;
 };
 
-export const getPrograms = async () => {
-    const response = await api.get('/academic/programs');
+export const getPrograms = async (academicYearId = null) => {
+    const params = academicYearId ? { academic_year_id: academicYearId } : {};
+    const response = await api.get('/academic/programs', { params });
     return response.data;
 };
 
@@ -32,8 +33,9 @@ export const createProgram = async (data) => {
     return response.data;
 };
 
-export const getCourses = async () => {
-    const response = await api.get('/academic/courses');
+export const getCourses = async (academicYearId = null) => {
+    const params = academicYearId ? { academic_year_id: academicYearId } : {};
+    const response = await api.get('/academic/courses', { params });
     return response.data;
 };
 
