@@ -38,10 +38,19 @@ def login():
         else:
             return jsonify({'message': 'Invalid password'}), 401
     
-    # Check Student (for future - students might register with password)
+    # Check Student with password verification
     student = Student.query.filter_by(email=email).first()
     if student:
-        # For now, students don't have passwords in this system
-        return jsonify({'message': 'Student login not available yet'}), 401
+        if student.password_hash and check_password_hash(student.password_hash, password):
+            return jsonify({
+                'message': 'Login successful',
+                'role': 'student',
+                'user_id': student.student_id,
+                'name': student.name,
+                'email': student.email,
+                'course_id': student.course_id
+            })
+        else:
+            return jsonify({'message': 'Invalid password'}), 401
 
     return jsonify({'message': 'User not found'}), 401

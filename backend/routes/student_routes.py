@@ -1,24 +1,69 @@
 from flask import Blueprint, request, jsonify
+from werkzeug.security import generate_password_hash
+from datetime import datetime
 from models import db, Student, Program, Course, ProgramCourse
 
 student_bp = Blueprint('student', __name__)
 
-@student_bp.route('/students', methods=['POST'])
+@student_bp.route('/register', methods=['POST'])
 def register_student():
+    """Public endpoint for student self-registration"""
     data = request.get_json()
+    
+    # Check if email already exists
+    if Student.query.filter_by(email=data['email']).first():
+        return jsonify({'error': 'Email already registered'}), 400
+    
+    # Parse date of birth if provided
+    dob = None
+    if data.get('dob'):
+        try:
+            dob = datetime.strptime(data['dob'], '%Y-%m-%d').date()
+        except ValueError:
+            pass
+    
     new_student = Student(
         name=data['name'],
         email=data['email'],
-        dob=data.get('dob'),
+        password_hash=generate_password_hash(data['password']) if data.get('password') else None,
+        dob=dob,
         contact=data.get('contact'),
         parent_name=data.get('parent_name'),
         parent_contact=data.get('parent_contact'),
         parent_email=data.get('parent_email'),
+        course_id=data.get('course_id')
+    )
+    db.session.add(new_student)
+    db.session.commit()
+    return jsonify({'message': 'Student registered successfully', 'student_id': new_student.student_id}), 201
+
+@student_bp.route('/students', methods=['POST'])
+def create_student():
+    """Admin endpoint to create a student"""
+    data = request.get_json()
+    
+    dob = None
+    if data.get('dob'):
+        try:
+            dob = datetime.strptime(data['dob'], '%Y-%m-%d').date()
+        except ValueError:
+            pass
+    
+    new_student = Student(
+        name=data['name'],
+        email=data['email'],
+        password_hash=generate_password_hash(data['password']) if data.get('password') else None,
+        dob=dob,
+        contact=data.get('contact'),
+        parent_name=data.get('parent_name'),
+        parent_contact=data.get('parent_contact'),
+        parent_email=data.get('parent_email'),
+        course_id=data.get('course_id'),
         program_id=data.get('program_id')
     )
     db.session.add(new_student)
     db.session.commit()
-    return jsonify({'message': 'Student registered successfully'}), 201
+    return jsonify({'message': 'Student created successfully'}), 201
 
 @student_bp.route('/students', methods=['GET'])
 def get_students():

@@ -97,13 +97,15 @@ class Student(db.Model):
     student_id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=True)  # For student login
     dob = db.Column(db.Date)
     contact = db.Column(db.String(20))
     parent_name = db.Column(db.String(100))
     parent_contact = db.Column(db.String(20))
     parent_email = db.Column(db.String(100))
-    program_id = db.Column(db.Integer, db.ForeignKey('program.program_id'), nullable=True) # Student enrolls in a program
-    # course_id = db.Column(db.Integer, db.ForeignKey('course.course_id')) # Optional: if student takes single course
+    course_id = db.Column(db.Integer, db.ForeignKey('course.course_id'), nullable=True)  # Student enrolls in a course
+    program_id = db.Column(db.Integer, db.ForeignKey('program.program_id'), nullable=True)  # Keep for backward compatibility
+    course = db.relationship('Course', backref='enrolled_students', lazy=True)
     program = db.relationship('Program', backref='students', lazy=True)
     payments = db.relationship('Payment', backref='student', lazy=True)
     submissions = db.relationship('AssignmentSubmission', backref='student', lazy=True)

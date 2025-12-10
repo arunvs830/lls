@@ -12,6 +12,12 @@ export const login = async (email, password) => {
     return response.data;
 };
 
+// Student self-registration
+export const registerStudent = async (data) => {
+    const response = await api.post('/student/register', data);
+    return response.data;
+};
+
 export const getAcademicYears = async () => {
     const response = await api.get('/academic/academic-years');
     return response.data;

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../services/api';
-import { Lock, Mail } from 'lucide-react';
+import { Lock, Mail, UserPlus } from 'lucide-react';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -17,7 +17,12 @@ const Login = () => {
         try {
             const data = await login(email, password);
             localStorage.setItem('user', JSON.stringify(data));
-            navigate('/');
+            // Redirect based on role
+            if (data.role === 'student') {
+                navigate('/student-dashboard');
+            } else {
+                navigate('/');
+            }
         } catch (err) {
             setError(err.response?.data?.message || 'Invalid credentials');
         } finally {
@@ -95,11 +100,24 @@ const Login = () => {
                         </button>
                     </form>
 
+                    {/* Student Registration Link */}
+                    <div className="mt-6 text-center">
+                        <p className="text-gray-600">New student?</p>
+                        <Link
+                            to="/register"
+                            className="mt-2 inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg hover:from-purple-600 hover:to-indigo-600 transition-all"
+                        >
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Register Now
+                        </Link>
+                    </div>
+
                     <div className="mt-6 pt-6 border-t border-gray-200">
                         <p className="text-center text-sm text-gray-500 mb-2">Demo Accounts:</p>
                         <div className="space-y-1 text-center text-xs text-gray-400">
                             <p><strong>Admin:</strong> admin@lls.com / admin123</p>
                             <p><strong>Staff:</strong> Use email & password set by admin</p>
+                            <p><strong>Student:</strong> Register or use registered account</p>
                         </div>
                     </div>
                 </div>
