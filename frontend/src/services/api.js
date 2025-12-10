@@ -70,4 +70,18 @@ export const createStaff = async (data) => {
     return response.data;
 };
 
+// Get all students (optionally filtered by course)
+export const getStudents = async (courseId = null) => {
+    const params = courseId ? { course_id: courseId } : {};
+    const response = await api.get('/student/students', { params });
+    return response.data;
+};
+
+// Get students for a specific staff member (students in their courses)
+export const getStaffStudents = async (staffId, courseId = null) => {
+    const params = courseId ? { course_id: courseId } : {};
+    const response = await api.get(`/student/staff/${staffId}/students`, { params });
+    return response.data;
+};
+
 export default api;

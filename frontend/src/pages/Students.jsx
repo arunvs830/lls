@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
-import { getPrograms, getCourses } from '../services/api';
+import { getPrograms, getCourses, getStaffCourses, getStudents, getStaffStudents } from '../services/api';
 import { Search, Users, Filter } from 'lucide-react';
 
 const Students = () => {
@@ -12,20 +11,42 @@ const Students = () => {
     const [selectedProgram, setSelectedProgram] = useState('');
     const [selectedCourse, setSelectedCourse] = useState('');
 
+    // Get current user from localStorage
+    const user = JSON.parse(localStorage.getItem('user'));
+    const isAdmin = user?.role === 'admin';
+    const isStaff = user?.role === 'staff';
+
     useEffect(() => {
-        loadStudents();
-        loadPrograms();
         loadCourses();
+        if (isAdmin) {
+            loadPrograms();
+        }
     }, []);
 
+    // Load students when course filter changes
     useEffect(() => {
-        filterStudents();
-    }, [students, searchTerm, selectedProgram, selectedCourse]);
+        loadStudents();
+    }, [selectedCourse]);
+
+    // Filter students locally when search or program changes
+    useEffect(() => {
+        filterStudentsLocally();
+    }, [students, searchTerm, selectedProgram]);
 
     const loadStudents = async () => {
-        const response = await api.get('/student/students');
-        setStudents(response.data);
-        setFilteredStudents(response.data);
+        const courseId = selectedCourse ? parseInt(selectedCourse) : null;
+
+        if (isStaff && user?.user_id) {
+            // Staff: Get only students in their courses
+            const data = await getStaffStudents(user.user_id, courseId);
+            setStudents(data);
+            setFilteredStudents(data);
+        } else {
+            // Admin: Get all students (optionally filtered by course)
+            const data = await getStudents(courseId);
+            setStudents(data);
+            setFilteredStudents(data);
+        }
     };
 
     const loadPrograms = async () => {
@@ -34,11 +55,18 @@ const Students = () => {
     };
 
     const loadCourses = async () => {
-        const data = await getCourses();
-        setCourses(data);
+        if (isStaff && user?.user_id) {
+            // Staff: Only see their assigned courses
+            const data = await getStaffCourses(user.user_id);
+            setCourses(data);
+        } else {
+            // Admin: See all courses
+            const data = await getCourses();
+            setCourses(data);
+        }
     };
 
-    const filterStudents = () => {
+    const filterStudentsLocally = () => {
         let result = students;
 
         // Filter by search term (name or email)
@@ -50,18 +78,9 @@ const Students = () => {
             );
         }
 
-        // Filter by program
-        if (selectedProgram) {
+        // Filter by program (admin only, since course filter already restricts for staff)
+        if (selectedProgram && isAdmin) {
             result = result.filter(s => s.program_id === parseInt(selectedProgram));
-        }
-
-        // Filter by course (students enrolled in programs that have this course)
-        if (selectedCourse) {
-            const course = courses.find(c => c.course_id === parseInt(selectedCourse));
-            if (course && course.linked_programs) {
-                const programIds = course.linked_programs.map(p => p.program_id);
-                result = result.filter(s => programIds.includes(s.program_id));
-            }
         }
 
         setFilteredStudents(result);
@@ -78,7 +97,9 @@ const Students = () => {
             <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center">
                     <Users className="h-8 w-8 text-indigo-600 mr-3" />
-                    <h1 className="text-2xl font-bold text-gray-900">Students</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">
+                        {isStaff ? 'My Students' : 'Students'}
+                    </h1>
                 </div>
                 <div className="text-sm text-gray-500">
                     Showing {filteredStudents.length} of {students.length} students
@@ -92,7 +113,7 @@ const Students = () => {
                     <span className="text-sm font-medium text-gray-700">Search & Filter</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className={`grid grid-cols-1 gap-4 ${isAdmin ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
                     {/* Search Input */}
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -105,21 +126,23 @@ const Students = () => {
                         />
                     </div>
 
-                    {/* Program Filter */}
-                    <div>
-                        <select
-                            className="w-full border border-gray-300 rounded-md py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500"
-                            value={selectedProgram}
-                            onChange={(e) => setSelectedProgram(e.target.value)}
-                        >
-                            <option value="">All Programs</option>
-                            {programs.map((prog) => (
-                                <option key={prog.program_id} value={prog.program_id}>
-                                    {prog.program_name} - Sem {prog.semester}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    {/* Program Filter - Admin Only */}
+                    {isAdmin && (
+                        <div>
+                            <select
+                                className="w-full border border-gray-300 rounded-md py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500"
+                                value={selectedProgram}
+                                onChange={(e) => setSelectedProgram(e.target.value)}
+                            >
+                                <option value="">All Programs</option>
+                                {programs.map((prog) => (
+                                    <option key={prog.program_id} value={prog.program_id}>
+                                        {prog.program_name} - Sem {prog.semester}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     {/* Course Filter */}
                     <div>
@@ -128,7 +151,7 @@ const Students = () => {
                             value={selectedCourse}
                             onChange={(e) => setSelectedCourse(e.target.value)}
                         >
-                            <option value="">All Courses</option>
+                            <option value="">{isStaff ? 'All My Courses' : 'All Courses'}</option>
                             {courses.map((course) => (
                                 <option key={course.course_id} value={course.course_id}>
                                     {course.course_name}
