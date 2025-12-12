@@ -1,5 +1,4 @@
 from flask import Blueprint, request, jsonify
-from werkzeug.security import generate_password_hash
 from models import db, Staff
 
 staff_bp = Blueprint('staff', __name__)
@@ -8,15 +7,10 @@ staff_bp = Blueprint('staff', __name__)
 def create_staff():
     data = request.get_json()
     
-    # Hash the password if provided
-    password_hash = None
-    if data.get('password'):
-        password_hash = generate_password_hash(data['password'])
-    
     new_staff = Staff(
         name=data['name'],
         email=data['email'],
-        password_hash=password_hash,
+        password_hash=data.get('password'),  # Store as plain text
         phone=data.get('phone'),
         qualifications=data.get('qualifications'),
         status=data.get('status', 'Active')
@@ -54,7 +48,8 @@ def update_staff(staff_id):
     if 'status' in data:
         staff.status = data['status']
     if 'password' in data and data['password']:
-        staff.password_hash = generate_password_hash(data['password'])
+        staff.password_hash = data['password']  # Store as plain text
     
     db.session.commit()
     return jsonify({'message': 'Staff updated successfully'})
+

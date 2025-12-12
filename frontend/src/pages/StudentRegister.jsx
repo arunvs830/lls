@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { registerStudent, getCourses } from '../services/api';
-import { UserPlus, BookOpen, User, Mail, Phone, Calendar, Lock, Users } from 'lucide-react';
+import { registerStudent, getPrograms, getProgramCourses } from '../services/api';
+import { UserPlus, BookOpen, User, Mail, Phone, Calendar, Lock, Users, GraduationCap } from 'lucide-react';
 
 const StudentRegister = () => {
     const navigate = useNavigate();
+    const [programs, setPrograms] = useState([]);
     const [courses, setCourses] = useState([]);
+    const [selectedProgram, setSelectedProgram] = useState('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
+    const [loadingCourses, setLoadingCourses] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -23,20 +26,51 @@ const StudentRegister = () => {
     });
 
     useEffect(() => {
-        loadCourses();
+        loadPrograms();
     }, []);
 
-    const loadCourses = async () => {
+    // Load courses when program changes
+    useEffect(() => {
+        if (selectedProgram) {
+            loadProgramCourses(selectedProgram);
+        } else {
+            setCourses([]);
+            setFormData(prev => ({ ...prev, course_id: '' }));
+        }
+    }, [selectedProgram]);
+
+    const loadPrograms = async () => {
         try {
-            const data = await getCourses();
-            setCourses(data.filter(c => c.status === 'Active'));
+            const data = await getPrograms();
+            // Filter only active programs
+            setPrograms(data.filter(p => p.status === 'Active'));
+        } catch (err) {
+            console.error('Error loading programs:', err);
+        }
+    };
+
+    const loadProgramCourses = async (programId) => {
+        setLoadingCourses(true);
+        try {
+            const data = await getProgramCourses(programId);
+            setCourses(data);
+            // Reset course selection when program changes
+            setFormData(prev => ({ ...prev, course_id: '' }));
         } catch (err) {
             console.error('Error loading courses:', err);
+            setCourses([]);
+        } finally {
+            setLoadingCourses(false);
         }
     };
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+        setError('');
+    };
+
+    const handleProgramChange = (e) => {
+        setSelectedProgram(e.target.value);
         setError('');
     };
 
@@ -53,6 +87,11 @@ const StudentRegister = () => {
 
         if (formData.password.length < 6) {
             setError('Password must be at least 6 characters');
+            return;
+        }
+
+        if (!formData.course_id) {
+            setError('Please select a program and course');
             return;
         }
 
@@ -188,28 +227,123 @@ const StudentRegister = () => {
                             </div>
                         </div>
 
-                        {/* Course Selection */}
+                        {/* Program & Course Selection */}
                         <div>
                             <h3 className="text-lg font-medium text-white mb-4 flex items-center">
-                                <BookOpen className="h-5 w-5 mr-2" />
-                                Course Enrollment
+                                <GraduationCap className="h-5 w-5 mr-2" />
+                                Program & Course Enrollment
                             </h3>
-                            <div>
-                                <label className="block text-sm font-medium text-indigo-200 mb-1">Select Course *</label>
-                                <select
-                                    name="course_id"
-                                    required
-                                    value={formData.course_id}
-                                    onChange={handleChange}
-                                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
-                                >
-                                    <option value="" className="text-gray-800">Choose a course</option>
-                                    {courses.map((course) => (
-                                        <option key={course.course_id} value={course.course_id} className="text-gray-800">
-                                            {course.course_name} {course.teacher_name ? `(${course.teacher_name})` : ''}
+
+                            <div className="space-y-4">
+                                {/* Program Dropdown */}
+                                <div>
+                                    <label className="block text-sm font-medium text-indigo-200 mb-2">
+                                        Select Program *
+                                    </label>
+                                    <select
+                                        value={selectedProgram}
+                                        onChange={handleProgramChange}
+                                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                                    >
+                                        <option value="" className="text-gray-800">Choose a program</option>
+                                        {programs.map((program) => (
+                                            <option key={program.program_id} value={program.program_id} className="text-gray-800">
+                                                {program.program_name} - Semester {program.semester}
+                                                {program.academic_year_name ? ` (${program.academic_year_name})` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {programs.length === 0 && (
+                                        <p className="text-xs text-yellow-300 mt-1">No programs available at the moment</p>
+                                    )}
+                                </div>
+
+                                {/* Selected Program Info */}
+                                {selectedProgram && (
+                                    <div className="p-3 bg-green-500/10 border border-green-400/30 rounded-lg">
+                                        {(() => {
+                                            const prog = programs.find(p => p.program_id === parseInt(selectedProgram));
+                                            return prog ? (
+                                                <div className="text-sm">
+                                                    <p className="text-green-200 font-medium">📚 {prog.program_name}</p>
+                                                    {prog.description && (
+                                                        <p className="text-green-300/70 text-xs mt-1">{prog.description}</p>
+                                                    )}
+                                                    <div className="flex gap-2 mt-2">
+                                                        <span className="text-xs bg-green-500/30 text-green-200 px-2 py-0.5 rounded">
+                                                            Semester {prog.semester}
+                                                        </span>
+                                                        {prog.academic_year_name && (
+                                                            <span className="text-xs bg-blue-500/30 text-blue-200 px-2 py-0.5 rounded">
+                                                                {prog.academic_year_name}
+                                                            </span>
+                                                        )}
+                                                        {prog.duration_months && (
+                                                            <span className="text-xs bg-purple-500/30 text-purple-200 px-2 py-0.5 rounded">
+                                                                {prog.duration_months} Months
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ) : null;
+                                        })()}
+                                    </div>
+                                )}
+
+                                {/* Course Dropdown */}
+                                <div>
+                                    <label className="block text-sm font-medium text-indigo-200 mb-2">
+                                        Select Course *
+                                    </label>
+                                    <select
+                                        name="course_id"
+                                        value={formData.course_id}
+                                        onChange={handleChange}
+                                        disabled={!selectedProgram || loadingCourses}
+                                        className={`w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent ${!selectedProgram ? 'opacity-50 cursor-not-allowed' : ''
+                                            }`}
+                                    >
+                                        <option value="" className="text-gray-800">
+                                            {!selectedProgram
+                                                ? 'First select a program'
+                                                : loadingCourses
+                                                    ? 'Loading courses...'
+                                                    : 'Choose a course'}
                                         </option>
-                                    ))}
-                                </select>
+                                        {courses.map((course) => (
+                                            <option key={course.course_id} value={course.course_id} className="text-gray-800">
+                                                {course.course_name} {course.credits ? `(${course.credits} Credits)` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {selectedProgram && courses.length === 0 && !loadingCourses && (
+                                        <p className="text-xs text-yellow-300 mt-1">No courses available for this program</p>
+                                    )}
+                                </div>
+
+                                {/* Selected Course Info */}
+                                {formData.course_id && (
+                                    <div className="p-3 bg-indigo-500/10 border border-indigo-400/30 rounded-lg">
+                                        {(() => {
+                                            const course = courses.find(c => c.course_id === parseInt(formData.course_id));
+                                            return course ? (
+                                                <div className="text-sm">
+                                                    <p className="text-indigo-200 font-medium">📖 {course.course_name}</p>
+                                                    <div className="flex gap-2 mt-2">
+                                                        {course.credits && (
+                                                            <span className="text-xs bg-purple-500/30 text-purple-200 px-2 py-0.5 rounded">
+                                                                {course.credits} Credits
+                                                            </span>
+                                                        )}
+                                                        <span className="text-xs bg-blue-500/30 text-blue-200 px-2 py-0.5 rounded">
+                                                            Semester {course.semester}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ) : null;
+                                        })()}
+                                    </div>
+                                )}
                             </div>
                         </div>
 

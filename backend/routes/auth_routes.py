@@ -1,5 +1,4 @@
 from flask import Blueprint, request, jsonify
-from werkzeug.security import check_password_hash
 from models import db, Staff, Student
 
 auth_bp = Blueprint('auth', __name__)
@@ -24,10 +23,10 @@ def login():
         else:
             return jsonify({'message': 'Invalid password'}), 401
     
-    # Check Staff with password verification
+    # Check Staff with plain text password comparison
     staff = Staff.query.filter_by(email=email).first()
     if staff:
-        if staff.password_hash and check_password_hash(staff.password_hash, password):
+        if staff.password_hash and staff.password_hash == password:
             return jsonify({
                 'message': 'Login successful',
                 'role': 'staff',
@@ -38,14 +37,15 @@ def login():
         else:
             return jsonify({'message': 'Invalid password'}), 401
     
-    # Check Student with password verification
+    # Check Student with plain text password comparison
     student = Student.query.filter_by(email=email).first()
     if student:
-        if student.password_hash and check_password_hash(student.password_hash, password):
+        if student.password_hash and student.password_hash == password:
             return jsonify({
                 'message': 'Login successful',
                 'role': 'student',
                 'user_id': student.student_id,
+                'student_id': student.student_id,
                 'name': student.name,
                 'email': student.email,
                 'course_id': student.course_id
@@ -54,3 +54,4 @@ def login():
             return jsonify({'message': 'Invalid password'}), 401
 
     return jsonify({'message': 'User not found'}), 401
+

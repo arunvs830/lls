@@ -1,5 +1,4 @@
 from flask import Blueprint, request, jsonify
-from werkzeug.security import generate_password_hash
 from datetime import datetime
 from models import db, Student, Program, Course, ProgramCourse
 
@@ -25,7 +24,7 @@ def register_student():
     new_student = Student(
         name=data['name'],
         email=data['email'],
-        password_hash=generate_password_hash(data['password']) if data.get('password') else None,
+        password_hash=data.get('password'),  # Store as plain text
         dob=dob,
         contact=data.get('contact'),
         parent_name=data.get('parent_name'),
@@ -52,7 +51,7 @@ def create_student():
     new_student = Student(
         name=data['name'],
         email=data['email'],
-        password_hash=generate_password_hash(data['password']) if data.get('password') else None,
+        password_hash=data.get('password'),  # Store as plain text
         dob=dob,
         contact=data.get('contact'),
         parent_name=data.get('parent_name'),
@@ -71,10 +70,8 @@ def get_students():
     course_id = request.args.get('course_id', type=int)
     
     if course_id:
-        # Get students enrolled in programs that have this course
-        students = Student.query.join(Program).join(ProgramCourse).filter(
-            ProgramCourse.course_id == course_id
-        ).distinct().all()
+        # Get students directly enrolled in this course
+        students = Student.query.filter_by(course_id=course_id).all()
     else:
         students = Student.query.all()
     
@@ -84,7 +81,9 @@ def get_students():
         'email': s.email,
         'contact': s.contact,
         'program_id': s.program_id,
-        'program_name': s.program.program_name if s.program else None
+        'program_name': s.program.program_name if s.program else None,
+        'course_id': s.course_id,
+        'course_name': s.course.course_name if s.course else None
     } for s in students])
 
 @student_bp.route('/students/<int:student_id>', methods=['GET'])
@@ -100,10 +99,10 @@ def get_student_profile(student_id):
         'program_id': student.program_id
     })
 
-# Get students for a specific staff member (students in programs with courses taught by this staff)
+# Get students for a specific staff member (students enrolled in courses taught by this staff)
 @student_bp.route('/staff/<int:staff_id>/students', methods=['GET'])
 def get_staff_students(staff_id):
-    """Get students enrolled in programs that have courses taught by this staff member"""
+    """Get students enrolled in courses taught by this staff member"""
     # Optional filter by specific course
     course_id = request.args.get('course_id', type=int)
     
@@ -124,16 +123,17 @@ def get_staff_students(staff_id):
     else:
         filter_course_ids = staff_course_ids
     
-    # Get students in programs that have these courses
-    students = Student.query.join(Program).join(ProgramCourse).filter(
-        ProgramCourse.course_id.in_(filter_course_ids)
-    ).distinct().all()
+    # Get students directly enrolled in these courses (via course_id field)
+    students = Student.query.filter(
+        Student.course_id.in_(filter_course_ids)
+    ).all()
     
     return jsonify([{
         'student_id': s.student_id,
         'name': s.name,
         'email': s.email,
         'contact': s.contact,
-        'program_id': s.program_id,
-        'program_name': s.program.program_name if s.program else None
+        'course_id': s.course_id,
+        'course_name': s.course.course_name if s.course else None
     } for s in students])
+

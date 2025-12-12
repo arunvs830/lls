@@ -179,7 +179,7 @@ const Students = () => {
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Course</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         </tr>
@@ -202,7 +202,11 @@ const Students = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{student.email}</td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        {student.program_name ? (
+                                        {student.course_name ? (
+                                            <span className="px-2 py-1 text-xs font-medium bg-indigo-100 text-indigo-800 rounded">
+                                                {student.course_name}
+                                            </span>
+                                        ) : student.program_name ? (
                                             <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded">
                                                 {student.program_name}
                                             </span>
